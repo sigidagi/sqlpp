@@ -18,6 +18,7 @@ class Console
     // private function/methods
     private:
         void searchWord(const string& str, vector<string>& results);
+        void deleteToPosition(int colnr);
 
     private:
         std::vector<string> history_;

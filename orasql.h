@@ -19,17 +19,14 @@ using namespace std;
 
 using example::interpreter;
 
-void quit()
-{
-    exit(0); 
-}
+void quit();
 
 
 class OraSql
 {
 
 public:
-	OraSql(interpreter& inter) : interpreter_(inter) 
+	OraSql() 
     {
         interpreter_.register_function("connect", &OraSql::connect, this);
         interpreter_.register_function("quit", &quit);
@@ -38,77 +35,37 @@ public:
 
 	~OraSql() { sql_.close(); }
 	const session& sql() {return sql_; }
+
+
 	bool connect(const string& server, const string& user, const string& passwd)
 	{
+        stringstream ss;
 		sql_.close();
 		try {
 			sql_.open(oracle, "service=" + server + " user=" + user + " password=" + passwd);
 		}
 		catch (oracle_soci_error const & e) {
-			cerr << "Oracle error: " << e.err_num_ << " " << e.what() << endl;
+			ss << "Oracle error: " << e.err_num_ << " " << e.what(); 
+            result_ = ss.str();
 			return false;
 		}
 
-		std::cout << "Connection succeeded!";
+		ss << "Connection succeeded!";
+        result_ = ss.str();
 		return true;
 	}
     
+    // return results after parsing input: it could be sql statment or calling specific function.
+    string parse(const string& str);
+	bool statement(const string& str);
 
-
-	bool statement(const string& str)
-	{
-		istringstream iss(str);
-		vector<string> tokens;
-		std::copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter<vector<string> >(tokens));
-		vector<string>::const_iterator cit;
-
-		if (tokens.empty())
-			return false;
-		// SELECT statment.
-		else if (tokens[0] == string("select"))
-		{
-			cit = std::find(tokens.begin(), tokens.end(), string("from"));
-			if (cit == tokens.end() || (++cit) == tokens.end())
-				std::cerr << "Incomplete 'select' statement!" << endl;
-
-
-			string ownertable = *(cit);
-			string owner, table;
-			size_t found = ownertable.find(".");
-			if (found != string::npos)
-			{
-				owner = ownertable.substr(0, found);
-				table = ownertable.substr(found+1);
-				boost::to_upper(owner);
-				boost::to_upper(table);
-			}
-
-			vector<string> column_names(16);
-			vector<string> types(16);
-			sql_ << "select column_name, data_type from all_tab_columns where owner = '" + owner + "' and table_name = '" + table + "'", into(column_names), into(types);
-
-            
-            // SD TODO:
-			
-		}
-		else if (tokens[0] == string("update"))
-		{
-
-		}
-		else if (tokens[0] == string("insert"))
-		{
-
-		}
-		else
-			return false;
-    
-        
-        return true;
-	}
+private: 
+    const string& result();
 
 private:
 	session sql_;
-    interpreter& interpreter_;
+    interpreter interpreter_;
+    string result_;
 };
 
 

@@ -1,16 +1,13 @@
-#include <QtCore/QCoreApplication>
 #include "orasql.h"
-#include <boost/thread.hpp>
+#include "console.h"
 
 using example::interpreter;
 
 int main(int argc, char *argv[])
 {
-	QCoreApplication a(argc, argv);
 
-	interpreter inter;
-	OraSql ora(inter);
-    
+    Console console;
+    console();
 
 
         /*
@@ -30,5 +27,5 @@ int main(int argc, char *argv[])
          */
 
 
-	return a.exec();
+	return 0; 
 }

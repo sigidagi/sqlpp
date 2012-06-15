@@ -1,24 +1,29 @@
 #ifndef _CONSOLE_H
 #define _CONSOLE_H
 
-#include <QObject>
-#include <QString>
+#include "orasql.h"
+#include <vector>
 #include <string>
-#include <iostream>
+#include <set>
 
+using std::string;
 
-
-class Console : public QObject
+class Console 
 {
-    Q_OBJECT
-
     public:
-        Console() {}
-        void operator() const;
+        Console(); 
+        ~Console();
+        void operator()();
 
-    signals:
-        void consoleInput(QString& text);
-}
+    // private function/methods
+    private:
+        void searchWord(const string& str, vector<string>& results);
+
+    private:
+        std::vector<string> history_;
+        std::set<string> keywowds_; 
+        OraSql sql_;
+};
 
 
 #endif

@@ -5,14 +5,8 @@ project(test)
 set(CMAKE_CXX_FLAGS "-g -Wall")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/Modules/")
 
-find_package(Qt REQUIRED)
+#find_package(Qt REQUIRED)
 find_package(SOCI REQUIRED)
-
-set(QT_USE_QTCORE TRUE)
-include(${QT_USE_FILE})
-
-FILE(GLOB TEST_MOC console.h )
-QT4_WRAP_CPP(TEST_SOURCE_CXX ${TEST_MOC})
 
 if (NOT EXISTS $ENV{ORACLE_HOME})
     message(FATAL_ERROR "Oracle not install or ORACLE_HOME enviromental variable not set")
@@ -22,7 +16,6 @@ message(STATUS "Oracle home = $ENV{ORACLE_HOME}")
 
 include_directories(
             ${SOCI_INCLUDE_DIR}
-            ${QT_INCLUDE_DIR}
             $ENV{ORACLE_HOME}/rdbms/public
 )
 
@@ -31,7 +24,12 @@ link_directories(
             $ENV{ORACLE_HOME}/lib
 )
 
-add_executable(test main.cpp)
+add_executable(test 
+               main.cpp 
+               console.cpp 
+               orasql.cpp
+               interpreter.cpp
+)
 
-target_link_libraries(test soci_core soci_oracle clntsh occi nnz11 ${QT_LIBRARIES})
+target_link_libraries(test soci_core soci_oracle clntsh occi nnz11 -lncurses)
 

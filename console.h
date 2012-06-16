@@ -13,16 +13,17 @@ class Console
     public:
         Console(); 
         ~Console();
-        void operator()();
+        int exec();
 
     // private function/methods
     private:
         void searchWord(const string& str, vector<string>& results);
         void deleteToPosition(int colnr);
+        void updateHistory(bool isOk, const string& msg);
 
     private:
         std::vector<string> history_;
-        std::set<string> keywowds_; 
+        std::set<string> keywords_; 
         OraSql sql_;
 };
 

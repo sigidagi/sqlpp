@@ -56,11 +56,11 @@ public:
 	}
     
     // return results after parsing input: it could be sql statment or calling specific function.
-    string parse(const string& str);
-	bool statement(const string& str);
+    const string& result();
+    bool parse(const string& str);
 
 private: 
-    const string& result();
+	bool statement(const string& str);
 
 private:
 	session sql_;

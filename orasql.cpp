@@ -5,7 +5,7 @@ void quit()
     exit(0);
 }
 
-string OraSql::parse(const string& line)
+bool OraSql::parse(const string& line)
 {
     stringstream ss;
 
@@ -14,20 +14,20 @@ string OraSql::parse(const string& line)
         interpreter_.parse_input(line);
         // it bellow function do not throw exception, it calls specified function
         // which should return results as string.
+        return true;
     }
     catch (example::NotAFunction& error)
     {
-        statement(line);
-        return result_;
+        return statement(line);
     }
     catch (std::runtime_error &error) 
     { 
         ss  << error.what() << std::endl; 
         result_ = ss.str();
-        return result_;
+        return false;
     }
 
-    return result_;
+    return false;
 
 }
 

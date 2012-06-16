@@ -31,5 +31,5 @@ add_executable(test
                interpreter.cpp
 )
 
-target_link_libraries(test soci_core soci_oracle clntsh occi nnz11 -lncurses)
+target_link_libraries(test soci_core soci_oracle clntsh occi nnz11 ncurses pthread)
 

@@ -20,21 +20,18 @@ Console::~Console()
     endwin();
 }
 
-void Console::operator()() 
+int Console::exec() 
 {
    int ch;   
    string info = "sqlpp>"; 
-   string msg, out;
+   string msg;
    int row(0), col(0);
-   int tabhit(0);
+   int tabhit(0), uphit(0);
    size_t found(0); 
 
    string word;
+   // only those keywords which fits typed word.
    vector<string> completions;
-   keywowds_.insert("select");
-   keywowds_.insert("selector");
-   keywowds_.insert("selectivity");
-   keywowds_.insert("seeyou");
 
    mvprintw(0,0, info.c_str());
    refresh();
@@ -43,13 +40,17 @@ void Console::operator()()
    {
         ch = getch();
         //if (ch == 0x08)
-        if (ch == KEY_BACKSPACE)
+        if (ch == KEY_BACKSPACE || ch == 0x08)
         {
+            delch();
             getyx(stdscr, row, col);
             if (col > (int)info.size())
+            {
                 mvdelch(row, col-1);
+                msg.erase(msg.end()-1);
+            }
         }
-        if (ch == ' ')
+        else if (ch == ' ')
         {
             // check if completion was called.
             if (!completions.empty())
@@ -57,6 +58,26 @@ void Console::operator()()
 
             addch(ch);
             msg.append((const char*)&ch);
+        }
+        else if (ch == KEY_UP)
+        {
+            if (uphit >= 0)
+            {
+                deleteToPosition(info.size());
+                mvprintw(row, (int)info.size(), history_[uphit].c_str());     
+                msg = history_[uphit];
+                --uphit;
+            }
+        }
+        else if (ch == KEY_DOWN)
+        {
+            if (uphit != 0)
+            {
+                ++uphit;
+                deleteToPosition(info.size());
+                mvprintw(row, (int)info.size(), history_[uphit].c_str());     
+                msg = history_[uphit];
+            }
         }
         // tab key == 0x09
         else if (ch == 0x09)
@@ -88,7 +109,14 @@ void Console::operator()()
          {
                 // do something with string processing.
              ++row;
-             out = sql_.parse(msg);
+
+             bool isOk = sql_.parse(msg);
+             updateHistory(isOk, msg);
+            
+             // reset to last history element.
+             uphit = history_.size()-1;
+
+             string out = sql_.result();
              // print whatever it cames out: error  or result.
              if (!out.empty())
              {
@@ -96,7 +124,9 @@ void Console::operator()()
                 ++row;
              }
              mvprintw(row, 0, info.c_str());
+             msg.clear();
          }
+         // add clicked char to the screen and to the string which holds statement;
          else
          {
              addch(ch);
@@ -105,7 +135,27 @@ void Console::operator()()
 
          refresh();
     } // end of while  
+
+    return 0;
 } // end of operator()
+
+void Console::updateHistory(bool isOk, const string& msg)
+{
+     if (isOk)
+     {
+        // if parsing succeedes - save statement to history(it could be possible recall in the futurei with UP
+        // and DOWN keys)
+        // such statement will also be split into keywords for completion.
+        
+        istringstream iss(msg);
+        std::copy(istream_iterator<string>(iss), istream_iterator<string>(), std::inserter(keywords_, keywords_.begin()));
+
+     }
+
+     // whenever was a result, remember last statement.
+     history_.push_back(msg);
+
+}
 
 void Console::deleteToPosition(int colnr)
 {
@@ -125,7 +175,7 @@ void Console::searchWord(const string& str, vector<string>& result)
         return; 
 
     std::set<string>::const_iterator cit;
-    for (cit = keywowds_.begin(); cit != keywowds_.end(); ++cit)
+    for (cit = keywords_.begin(); cit != keywords_.end(); ++cit)
     {
        string tmp = *cit;
        int res = tmp.compare(0, str.size(), str); 

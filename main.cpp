@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
 
     Console console;
-    console();
+    return console.exec();
 
 
         /*
@@ -26,6 +26,4 @@ int main(int argc, char *argv[])
 		 *}
          */
 
-
-	return 0; 
 }

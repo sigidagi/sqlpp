@@ -1,4 +1,5 @@
 #include "console.h"
+#include "orasql.h"
 #include <curses.h>
 #include <string>
 #include <stdlib.h>
@@ -6,13 +7,14 @@
 
 using std::string;
 
-Console::Console()
+Console::Console() : info_("sqlpp>")
 {
     initscr();
-    clear();
     cbreak();
     keypad(stdscr, TRUE);
     noecho();
+
+    sql_ = new OraSql(this);
 }
 
 Console::~Console()
@@ -23,7 +25,6 @@ Console::~Console()
 int Console::exec() 
 {
    int ch;   
-   string info = "sqlpp>"; 
    string msg;
    int row(0), col(0);
    int tabhit(0), uphit(0);
@@ -33,8 +34,7 @@ int Console::exec()
    // only those keywords which fits typed word.
    vector<string> completions;
 
-   mvprintw(0,0, info.c_str());
-   refresh();
+   clearScreen();
 
    while(1)
    {
@@ -44,7 +44,7 @@ int Console::exec()
         {
             delch();
             getyx(stdscr, row, col);
-            if (col > (int)info.size())
+            if (col > (int)info_.size())
             {
                 mvdelch(row, col-1);
                 msg.erase(msg.end()-1);
@@ -52,32 +52,46 @@ int Console::exec()
         }
         else if (ch == ' ')
         {
-            // check if completion was called.
+            // check if completion was called before space.
             if (!completions.empty())
+            {
                 msg = msg.substr(0, found+1) + completions[tabhit-1];
+                // clear completion variable - job is done!.
+                completions.clear();
+            }
 
             addch(ch);
             msg.append((const char*)&ch);
         }
         else if (ch == KEY_UP)
         {
-            if (uphit >= 0)
+            if (uphit >= 0 && !history_.empty())
             {
-                deleteToPosition(info.size());
-                mvprintw(row, (int)info.size(), history_[uphit].c_str());     
+                deleteToPosition(info_.size());
+                mvprintw(row, (int)info_.size(), history_[uphit].c_str());     
                 msg = history_[uphit];
                 --uphit;
             }
         }
         else if (ch == KEY_DOWN)
         {
-            if (uphit != 0)
+            if (uphit != (history_.size() -1))
             {
                 ++uphit;
-                deleteToPosition(info.size());
-                mvprintw(row, (int)info.size(), history_[uphit].c_str());     
+                deleteToPosition(info_.size());
+                mvprintw(row, (int)info_.size(), history_[uphit].c_str());     
                 msg = history_[uphit];
             }
+        }
+        else if (ch == KEY_LEFT)
+        {
+            getyx(stdscr, row, col);
+            move(row, col-1);
+        }
+        else if (ch == KEY_RIGHT)
+        {
+            getyx(stdscr, row, col);
+            move(row, col+1);
         }
         // tab key == 0x09
         else if (ch == 0x09)
@@ -93,14 +107,14 @@ int Console::exec()
             searchWord(word, completions);
             if (!completions.empty() && tabhit < (int)completions.size())
             {
-                deleteToPosition(info.size()+found+1);
-                mvprintw(row, info.size()+found+1, completions[tabhit].c_str());
+                deleteToPosition(info_.size()+found+1);
+                mvprintw(row, info_.size()+found+1, completions[tabhit].c_str());
             }
             if (!completions.empty() && tabhit >= (int)completions.size())
             {
                 tabhit = 0;
-                deleteToPosition(info.size()+found+1);
-                mvprintw(row, info.size()+found+1, completions[tabhit].c_str());
+                deleteToPosition(info_.size()+found+1);
+                mvprintw(row, info_.size()+found+1, completions[tabhit].c_str());
             }
             ++tabhit;
          }
@@ -108,22 +122,37 @@ int Console::exec()
          else if (ch == 0x0a)
          {
                 // do something with string processing.
-             ++row;
-
-             bool isOk = sql_.parse(msg);
-             updateHistory(isOk, msg);
-            
-             // reset to last history element.
-             uphit = history_.size()-1;
-
-             string out = sql_.result();
-             // print whatever it cames out: error  or result.
-             if (!out.empty())
+             if (!msg.empty())
              {
-                mvprintw(row, 0, out.c_str());
-                ++row;
+                 bool isOk = sql_->parse(msg);
+                 updateHistory(isOk, msg);
+                
+                 // reset to last history element.
+                 uphit = history_.size()-1;
+
+                 string out = sql_->result();
+                 // print whatever it cames out: error  or result.
+                 
+                 getyx(stdscr, row, col);
+                 ++row;
+                 if (!out.empty())
+                 {
+                    // search for line termminator '\n' in output string and print to console. NOTE 
+                    std::stringstream ss(out);
+                    std::string line;
+                    while ( std::getline(ss, line))
+                    {
+                        mvprintw(row, 0, line.c_str());
+                        ++row;
+                    }
+
+                 }
+
              }
-             mvprintw(row, 0, info.c_str());
+             
+             getyx(stdscr, row, col);
+             ++row;
+             mvprintw(row, 0, info_.c_str());
              msg.clear();
          }
          // add clicked char to the screen and to the string which holds statement;
@@ -157,6 +186,22 @@ void Console::updateHistory(bool isOk, const string& msg)
 
 }
 
+void Console::clearScreen()
+{
+    // clean all terminal 
+    int r, c;
+    getyx(stdscr, r, c);
+    move(r, 0);
+    
+    while(r != 0)
+    {
+        deleteln(); move(--r, 0);
+    }
+    deleteln();
+    mvprintw(0,0, info_.c_str());
+    refresh();
+}
+
 void Console::deleteToPosition(int colnr)
 {
     int c, r;
@@ -165,6 +210,7 @@ void Console::deleteToPosition(int colnr)
     {
         mvdelch(r, --c);
     }
+    refresh();
 }
 
 void Console::searchWord(const string& str, vector<string>& result)

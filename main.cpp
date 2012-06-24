@@ -7,23 +7,13 @@ int main(int argc, char *argv[])
 {
 
     Console console;
-    return console.exec();
-
-
-        /*
-		 *try                          
-		 *{
-		 *    interpreter.parse_input(line);
-		 *}
-		 *catch (example::NotAFunction& error)
-		 *{
-		 *    ora.statement(line);
-		 *    //std::cout << error.what() << std::endl;
-		 *}
-		 *catch (std::runtime_error &error) 
-		 *{ 
-		 *    std::cerr << error.what() << std::endl; 
-		 *}
-         */
+    
+    // then connect to database.
+    if (console.autologin())
+        // loop for catching keyboard events
+        return console.exec();
+    else
+        return 0;
+    
 
 }

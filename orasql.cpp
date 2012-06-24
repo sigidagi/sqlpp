@@ -12,8 +12,8 @@ OraSql::OraSql(Console* console) : console_(console)
 {
     interpreter_.register_function("connect", &OraSql::connect, this);
     interpreter_.register_function("clear", &Console::clearScreen, console_);
-    interpreter_.register_function("quit", &quit);
-    interpreter_.register_function("exit", &quit);
+    interpreter_.register_function("quit", &Console::quit, console_);
+    interpreter_.register_function("exit", &Console::quit, console_);
 }
 
 OraSql::~OraSql()
@@ -62,6 +62,7 @@ bool OraSql::parse(const string& line)
         return false;
     }
 
+
     return false;
 
 }
@@ -81,6 +82,7 @@ bool OraSql::statement(const string& str)
 
     if (tokens.empty())
     {
+        result_ = "nothing to execute!";
         return false;
     }
     // SELECT statment.
@@ -107,8 +109,18 @@ bool OraSql::statement(const string& str)
 
         vector<string> column_names(16);
         vector<string> types(16);
-        sql_ << "select column_name, data_type from all_tab_columns where owner = '" + owner + "' and table_name = '" + table + "'", into(column_names), into(types);
+        try 
+        {
 
+            sql_ << "select column_name, data_type from all_tab_columns where owner = '" + owner + "' and table_name = '" + table + "'", into(column_names), into(types);
+        }
+        catch (oracle_soci_error const & e) 
+        {
+            stringstream ss;
+            ss << e.what(); 
+            result_ = ss.str();
+            return false;
+        }
 
         
         // select column names. separate consdition is '*'
@@ -131,9 +143,10 @@ bool OraSql::statement(const string& str)
         else if (selectedNames.size() > 0)
         {
             vector< vector<string> > results(selectedNames.size(), vector<string>(100));
+            vector<indicator> inds;
             for (size_t col = 0; col < results.size(); ++col)
             {
-                sql_ << "select " + selectedNames[col] + " from " + ownertable, into(results[col]); 
+                sql_ << "select " + selectedNames[col] + " from " + ownertable, into(results[col], inds); 
             }
         
        
@@ -153,7 +166,11 @@ bool OraSql::statement(const string& str)
 
     }
     else
+    {
+        result_ = "it seems that you don not want to 'select'\n";
         return false;
+    }
+
 
     
     return true;

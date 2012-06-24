@@ -1,3 +1,5 @@
+#ifndef INTERPRETER_H
+#define INTERPRETER_H
 
 // (C) Copyright Tobias Schwinger
 //
@@ -207,3 +209,4 @@ namespace example
 
 } // nameapce example
 
+#endif

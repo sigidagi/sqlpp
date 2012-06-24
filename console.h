@@ -1,23 +1,23 @@
 #ifndef _CONSOLE_H
 #define _CONSOLE_H
 
+#include "interpreter.hpp"
 #include <vector>
 #include <string>
 #include <deque>
 #include <set>
 
 using std::string;
+using example::interpreter;
 
 class OraSql;
 
 class Console 
 {
     public:
-        Console(); 
+        Console(OraSql* sql, const string& prompt); 
         ~Console();
         int exec();
-        bool login();
-        bool autologin();
 
         // those bellow function can be called from orasql when statement(console input) is parsed.
         void clearScreen();
@@ -25,6 +25,9 @@ class Console
 
     // private function/methods
     private:
+        bool parse(const string& str);
+        void clear();
+    
         void insertChar(char ch);
         void deleteChar();
         void searchWord(const string& str, std::vector<string>& results);
@@ -40,6 +43,7 @@ class Console
         
         OraSql* sql_;
     
+        interpreter interpreter_;
         string prompt_;
         string msg_;
 };

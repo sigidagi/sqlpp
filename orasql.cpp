@@ -8,12 +8,9 @@ void quit()
     exit(0);
 }
 
-OraSql::OraSql(Console* console) : console_(console)
+OraSql::OraSql()
 {
-    interpreter_.register_function("connect", &OraSql::connect, this);
-    interpreter_.register_function("clear", &Console::clearScreen, console_);
-    interpreter_.register_function("quit", &Console::quit, console_);
-    interpreter_.register_function("exit", &Console::quit, console_);
+
 }
 
 OraSql::~OraSql()
@@ -39,33 +36,6 @@ bool OraSql::connect(const string& server, const string& user, const string& pas
     return true;
 }
 
-bool OraSql::parse(const string& line)
-{
-    stringstream ss;
-    result_.clear();
-
-    try                          
-    {
-        interpreter_.parse_input(line);
-        // it bellow function do not throw exception, it calls specified function
-        // which should return results as string.
-        return true;
-    }
-    catch (example::NotAFunction& error)
-    {
-        return statement(line);
-    }
-    catch (std::runtime_error &error) 
-    { 
-        ss  << error.what() << std::endl; 
-        result_ = ss.str();
-        return false;
-    }
-
-
-    return false;
-
-}
 
 const string& OraSql::result()
 {

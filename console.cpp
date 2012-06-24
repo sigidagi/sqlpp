@@ -1,133 +1,51 @@
+#include <curses.h>
 #include "console.h"
 #include "orasql.h"
-#include <curses.h>
 #include <string>
 #include <stdlib.h>
 #include <stdio.h>
 
 using std::string;
 
-Console::Console() : sql_(0), prompt_("sqlpp>")
+
+bool Console::parse(const string& line)
 {
+    stringstream ss;
+
+    try                          
+    {
+        interpreter_.parse_input(line);
+        // it bellow function do not throw exception, it calls specified function
+        // which should return results as string.
+        return true;
+    }
+    catch (example::NotAFunction& error)
+    {
+        return sql_->statement(line);
+    }
+    catch (std::runtime_error &error) 
+    {
+        return false;
+    }
+
+    return true;
+}
+
+Console::Console(OraSql* sql, const string& prompt) : sql_(sql), prompt_(prompt) 
+{
+    interpreter_.register_function("clear", &Console::clear, this);
+    interpreter_.register_function("quit", &Console::quit, this);
+    interpreter_.register_function("exit", &Console::quit, this);
+
     initscr();
     cbreak();
     keypad(stdscr, TRUE);
     noecho();
-
-    sql_ = new OraSql(this);
-    //screenbuffer_.resize(LINES);
 }
 
 Console::~Console()
 {
     endwin();
-    if (sql_ != 0)
-    {
-        delete sql_;
-        sql_ = 0;
-    }
-}
-
-bool Console::autologin()
-{
-    string msg = "connect orclas sigis sd"; // + answers[0] + " " + answers[1] + " " + answers[2];
-    prompt_ = "sqlpp> ";
-    return true;
-}
-
-bool Console::login()
-{
-    char ch;
-    keypad(stdscr, TRUE);
-    
-    vector<string> prompts;
-    prompts.push_back("server: ");
-    prompts.push_back("user: ");
-    prompts.push_back("passwd: ");
-
-    vector<string> answers;
-
-    int hits(0);
-    prompt_ = prompts[hits];
-    
-    clearScreen();
-    mvprintw(0, 0, prompt_.c_str());
-    refresh();
-
-    while(1)
-    {
-        ch = getch();
-        // enter
-        if (ch == '\n')
-        {
-            if (answers.size() != 3) 
-            {
-                answers.push_back(msg_);
-                msg_.clear();
-                if (hits != 2) 
-                {
-                    prompt_ = prompts[++hits];
-                    int row, col;
-                    getyx(stdscr, row, col);
-                    ++row;
-                    mvprintw(row, 0, prompt_.c_str());
-                }
-
-
-            }
-            if (answers.size() == 3)
-            {
-                string msg = "connect " + answers[0] + " " + answers[1] + " " + answers[2];
-                bool isOk  = sql_->parse(msg);                
-                if (isOk)
-                {
-                    prompt_ = answers[1]+"@"+answers[0]+"> ";
-                    msg_.clear();
-                    return true;
-                }
-                else
-                {
-                    //printResults(sql_->result());        
-                    int row, col;
-                    getyx(stdscr, row, col);
-                    ++row;
-                    mvprintw(row, 0, "try gain, or press Ctr-C to quit.");
-               
-
-                    msg_.clear();
-                    answers.clear();
-                    hits = 0;
-                    prompt_ = prompts[hits];
-                    ++row;
-                    mvprintw(row, 0, prompt_.c_str());
-                }
-            }
-        }
-        else if (ch == KEY_LEFT)
-        {
-            int row, col;
-            getyx(stdscr, row, col);
-            if (col > (int)prompt_.size())
-                move(row, col-1);
-        }
-        else if (ch == KEY_RIGHT)
-        {
-            int row, col;
-            getyx(stdscr, row, col);
-            if (col < ((int)msg_.size() + (int)prompt_.size()))
-                move(row, col+1);
-        }
-        // backspace or "delete char before cursor."
-        else if (ch == '\a')
-        {
-            deleteChar();
-        }
-        else 
-            insertChar(ch);
-    
-        refresh();
-
-    }
 }
 
 int Console::exec() 
@@ -145,10 +63,7 @@ int Console::exec()
    // only those keywords which fits typed word.
    vector<string> completions;
 
-   clearScreen();
-   screenbuffer_.push_back(prompt_);
-   mvprintw(0,0,prompt_.c_str());
-   refresh();
+   clear();
 
    while(1)
    {
@@ -230,22 +145,21 @@ int Console::exec()
              // clear completion variable - job is done!.
 
              completions.clear();
+
              tabhit = 0;
-           
              insertChar(ch);
          }
 
          // enter key 
          else if (ch == '\n' || ch == KEY_ENTER)
          {
-             getyx(stdscr, row, col);
 
              screenbuffer_.push_back(prompt_ + msg_);
              int nlines(0);
                 // do something with string processing.
              if (!msg_.empty())
              {
-                 bool isOk = sql_->parse(msg_);
+                 bool isOk = parse(msg_);
                  // whenever was a result, remember last statement.
                  history_.push_back(msg_);
                  if (isOk) updateKeywords(msg_);
@@ -256,6 +170,7 @@ int Console::exec()
                  string out = sql_->result();
                  // print whatever it cames out: error  or result.
                 
+                 getyx(stdscr, row, col);
                  nlines = pushToBuffer(out);
                  if ((row + nlines) > LINES-2)
                     repaintScreen();
@@ -272,6 +187,7 @@ int Console::exec()
              }
              else
              {
+                 getyx(stdscr, row, col);
                  if (row > LINES-2)
                      repaintScreen();
                  else
@@ -297,7 +213,15 @@ int Console::exec()
     return 0;
 } // end of operator()
 
+void Console::clear()
+{
+   clearScreen();
+   screenbuffer_.clear();
+   screenbuffer_.push_back(prompt_);
+   mvprintw(0,0,prompt_.c_str());
+   refresh();
 
+}
 
 void Console::repaintScreen()
 {

@@ -1,19 +1,26 @@
 #include "orasql.h"
+#include "login.h"
 #include "console.h"
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 using example::interpreter;
 
 int main(int argc, char *argv[])
 {
+   
+    boost::shared_ptr<OraSql> sql = boost::make_shared<OraSql>();    
+   
+    Login login(sql.get());
+    login.exec();
 
-    Console console;
+    if (!login.succeeded())
+       return 0; 
+        
+    string prompt = login.prompt();
+
+    Console console(sql.get(), prompt);
     
-    // then connect to database.
-    if (console.autologin())
-        // loop for catching keyboard events
-        return console.exec();
-    else
-        return 0;
-    
+    return console.exec();
 
 }

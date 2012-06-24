@@ -29,6 +29,7 @@ add_executable(test
                console.cpp 
                orasql.cpp
                interpreter.cpp
+               login.cpp
 )
 
 target_link_libraries(test soci_core soci_oracle clntsh occi nnz11 ncurses pthread)
